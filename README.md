@@ -15,8 +15,8 @@ cd phoenixd-docker
 
 choose two subdomains on your domain, where you have the DNS management. In my example they are
 
-- n1.sats.mobi
-- lb1.sats.mobi
+- n1.yourdomain.com
+- lb1.yourdomain.com
 
 n1 will be the endpoint for phoenixd APIs
 lb1 will be the lnbits install
