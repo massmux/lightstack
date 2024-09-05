@@ -55,7 +55,7 @@ at this moment put the postgreSQL password you set in docker-compose.yml file
 
 ### First temporary boot
 
-Now you need to boot the first time the system in order to let it initialize basic files. So run
+Now you need to boot the first time the system in order to let it initialize basic files. It is normal if you see errors in connection to the phoenixd funding souce, because you still did not configure it. So run
 
 ```
 docker compose up
@@ -89,8 +89,11 @@ check the logs if all is ok
 docker-compose logs -t -f --tail 300
 ```
 
-then access to LNBITS at: https://lb1.yourdomain.com
-you can also access to phoenixd endpoint with
+then access to LNBITS at:
+
+- https://lb1.yourdomain.com
+
+you can also access also to phoenixd API endpoint with:
 
 - https://n1.yourdomain.com
 - http password: provided in phoenix.conf file
