@@ -1,6 +1,6 @@
-# Full Phoenixd implementation
+# Full Phoenixd Stack
 
-includes phoenixd + nginx (with lets encrypt certificate) + lnbits
+ Just run your own self-custodial cloud Lightning node on your VPS, from your domain name, with this stack. You immediately get a LNBits instance on your own node and the phoenixd endpoint available on a SSL connection
 
 
 ## Installation
@@ -90,9 +90,15 @@ docker-compose logs -t -f --tail 300
 ```
 
 then access to LNBITS at: https://lb1.yourdomain.com
+you can also access to phoenixd endpoint with
+
+https://n1.yourdomain.com
+<http password provided in phoenix.conf file>
 
 in case you want to tune your configuration you can always setup the .env file as you prefer.
 
+## Next steps
 
+We will create an init script to initialize all the configuration. Any contribution is welcome.
 
  
