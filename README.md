@@ -92,8 +92,8 @@ docker-compose logs -t -f --tail 300
 then access to LNBITS at: https://lb1.yourdomain.com
 you can also access to phoenixd endpoint with
 
-https://n1.yourdomain.com
-<http password provided in phoenix.conf file>
+- https://n1.yourdomain.com
+- http password: provided in phoenix.conf file
 
 in case you want to tune your configuration you can always setup the .env file as you prefer.
 
