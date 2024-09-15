@@ -31,7 +31,7 @@ services:
                 - frontend
 
     lnbits:
-      image: massmux/lnbits:0.12.10
+      image: massmux/lnbits:0.12.11
       hostname: lnbits
       restart: on-failure
       stop_grace_period: 1m
