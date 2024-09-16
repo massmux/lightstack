@@ -15,7 +15,7 @@ cd phoenixd-docker
 
 ### Choose domain and cnames
 
-choose two subdomains on your domain, where you have the DNS management. In my example they are
+choose two subdomains on your domain, where you have the DNS management. They must point the A record to the host server IP and this must be already propagated when you are going to invoke initialization script. In my example they are
 
 - n1.yourdomain.com
 - lb1.yourdomain.com
@@ -23,85 +23,32 @@ choose two subdomains on your domain, where you have the DNS management. In my e
 n1 will be the endpoint for phoenixd APIs
 lb1 will be the lnbits install
 
-### Create letsencrypt certificates
+### Initialize
 
-for each subdomain do:
-
-```
-sudo certbot certonly --manual --preferred-challenges dns
-```
-now copy the letsencrypt folder to the app folder
 
 ```
-sudo cp -R /etc/letsencrypt ~/phoenixd-docker
-```
-
-### Configure domains (file default.conf)
-
-set the correct domains names in default.conf to point to your cnames and to correct certificate location
-
-### Edit docker-compose.yml
-
-set your preferred postgreSQL password there
-
-### Create the .env file
+cd phoenixd-docker
+./init.sh
 
 ```
-cp .env.example .env
-```
-
-now do the first edit to the file at the end of the file itself. It will be necessary to edit it again later.
-at this moment put the postgreSQL password you set in docker-compose.yml file
-
-### First temporary boot
-
-Now you need to boot the first time the system in order to let it initialize basic files. It is normal if you see errors in connection to the phoenixd funding souce, because you still did not configure it. So run
+In case you need to start inizialization from the beginning, you need to clear existing configuration by issuing:
 
 ```
-docker compose up
-```
-and see the logs.
-
-When all booted stop it with CTRL-C and wait it to shutdown. The system has created a lot of files in the ~/phoenixd-docker directory and you need to configure some settings as described below
-
-### Final configuration
-
-edit the file data/phoenix.conf by adding on top of file
-
-```
-http-bind-ip=0.0.0.0
+./init.sh clear
 ```
 
-then copy the http-password value and update the .env file (on the bottom) with such a value (PHOENIXD_API_PASSWORD)
-that's all.
 
-### Boot
+### Access
 
-now you can run the system in this way
-
-```
-docker compose up -d
-```
-
-check the logs if all is ok
-
-```
-docker-compose logs -t -f --tail 300
-```
-
-then access to LNBITS at:
+Access LNBITS at:
 
 - https://lb1.yourdomain.com
 
-you can also access also to phoenixd API endpoint with:
+Access phoenixd API endpoint with:
 
 - https://n1.yourdomain.com
 - http password: provided in phoenix.conf file
 
 in case you want to tune your configuration you can always setup the .env file as you prefer.
-
-## Next steps
-
-We will create an init script to initialize all the configuration. Any contribution is welcome.
 
  
