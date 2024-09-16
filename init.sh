@@ -138,11 +138,11 @@ read -p "Do you want real Letsencrypt certificates to be issued? (y/n): " letsce
 
 # Generate certificates
 if [[ ! $letscertificates =~ ^[Yy]$ ]]; then
-        echo "Issuing Letsencrypt certificates on local host..."
-	generate_certificates_certbot $PHOENIXD_DOMAIN $LNBITS_DOMAIN
-else
         echo "Issuing selfsigned certificates on local host..."
 	generate_certificates $PHOENIXD_DOMAIN $LNBITS_DOMAIN
+else
+        echo "Issuing Letsencrypt certificates on local host..."
+	generate_certificates_certbot $PHOENIXD_DOMAIN $LNBITS_DOMAIN
 fi
 
 # Generate password for Postgres
