@@ -2,6 +2,13 @@
 
 # Interactive initialization script for phoenixd/lnbits stack
 
+# if got clear parameter, then clear existing initialization and exit
+if [[ $1 =~ ^clear$ ]]; then
+	sudo rm -Rf data/ letsencrypt/ lnbitsdata/ pgtmp/ pgdata/ docker-compose.yml default.conf
+        echo "Setup cleared"
+        exit 0
+    fi
+
 set -e
 
 # Function to generate a random password
