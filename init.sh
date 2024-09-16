@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Interactive initialization script for phoenixd/lnbits stack
+
 set -e
 
 # Function to generate a random password
@@ -128,13 +130,20 @@ cp .env.example .env
 
 echo "Example files copied and renamed."
 
-# Request domains from the user
+# Request configuration data from the user
 read -p "Enter the domain for Phoenixd API (e.g., api.yourdomain.com): " PHOENIXD_DOMAIN
 read -p "Enter the domain for LNbits (e.g., lnbits.yourdomain.com): " LNBITS_DOMAIN
+read -p "Do you want real Letsencrypt certificates to be issued? (y/n): " letscertificates
 
 
 # Generate certificates
-generate_certificates $PHOENIXD_DOMAIN $LNBITS_DOMAIN
+if [[ ! $letscertificates =~ ^[Yy]$ ]]; then
+        echo "Issuing Letsencrypt certificates on local host..."
+	generate_certificates_certbot $PHOENIXD_DOMAIN $LNBITS_DOMAIN
+else
+        echo "Issuing selfsigned certificates on local host..."
+	generate_certificates $PHOENIXD_DOMAIN $LNBITS_DOMAIN
+fi
 
 # Generate password for Postgres
 POSTGRES_PASSWORD=$(generate_password)
@@ -247,6 +256,7 @@ echo "All containers have been stopped."
 # Configure phoenix.conf and update .env
 echo "Configuring phoenix.conf and updating .env..."
 
+
 # Use the relative path to the current directory
 PHOENIX_CONF="$(pwd)/data/phoenix.conf"
 
@@ -259,7 +269,7 @@ if [ ! -f "$PHOENIX_CONF" ]; then
     exit 1
 fi
 
-# Add http-bind-ip=0.0.0.0 at the beginning of the file if it doesn't exist
+# Allow phoenixd to listen from 0.0.0.0 
 if ! grep -q "^http-bind-ip=0.0.0.0" "$PHOENIX_CONF"; then
     sed -i '1ihttp-bind-ip=0.0.0.0' "$PHOENIX_CONF"
     echo "http-bind-ip=0.0.0.0 added to phoenix.conf"
@@ -300,10 +310,13 @@ wait_for_container phoenixd
 wait_for_container lnbits
 wait_for_container nginx
 
-echo "All containers have been successfully started with the new configurations."
+echo 
+echo "Initialization complete. All containers have been successfully started with the new configurations."
 echo "Your system is now ready for use."
-echo "You can access LNbits at https://$LNBITS_DOMAIN"
-echo "The Phoenixd API is accessible at https://$PHOENIXD_DOMAIN"
-echo "To manage the containers, use the docker compose commands in the project directory."
-echo "To view container logs, use 'docker compose logs [container_name]' or "
+echo 
+echo "- You can access LNbits at https://$LNBITS_DOMAIN"
+echo "- The Phoenixd API is accessible at https://$PHOENIXD_DOMAIN"
+echo "- To manage the containers, use the docker compose commands in the project directory."
+echo
+echo "In order to view container logs, just use 'docker compose logs [container_name]' or "
 echo "docker compose logs -t -f --tail 300"
