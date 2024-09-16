@@ -24,7 +24,7 @@ update_env() {
 # Function to wait for a container to be ready
 wait_for_container() {
     echo "Waiting for $1 to be ready..."
-    until [ "`docker inspect -f {{.State.Running}} $1`"=="true" ]; do
+    until [ "`docker inspect --format=\"{{.State.Running}}\" $1`"=="true" ]; do
         sleep 1;
     done;
     sleep 2;
@@ -303,12 +303,6 @@ echo "Phoenixd password: $PHOENIXD_PASSWORD"
 # Restart all containers
 echo "Restarting all containers with the new configurations..."
 docker compose up -d
-
-# Wait for all containers to be ready
-wait_for_container postgres
-wait_for_container phoenixd
-wait_for_container lnbits
-wait_for_container nginx
 
 echo 
 echo "Initialization complete. All containers have been successfully started with the new configurations."
