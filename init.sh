@@ -2,7 +2,6 @@
 
 # Interactive initialization script for phoenixd/lnbits stack
 
-# if got clear parameter, then clear existing initialization and exit
 if [[ $1 =~ ^clear$ ]]; then
 	sudo rm -Rf data/ letsencrypt/ lnbitsdata/ pgtmp/ pgdata/ docker-compose.yml default.conf
         echo "Setup cleared"
@@ -11,12 +10,17 @@ if [[ $1 =~ ^clear$ ]]; then
 
 set -e
 
-# Function to generate a random password
+
+
+# Some useful functions
+#
+#
+
 generate_password() {
     openssl rand -base64 12 | tr -d "=+/" | cut -c1-16
 }
 
-# Function to update or add a variable in the .env file
+# Update or add a variable in the .env file
 update_env() {
     local key=$1
     local value=$2
@@ -28,7 +32,7 @@ update_env() {
     fi
 }
 
-# Function to wait for a container to be ready
+# Wait for a container to be ready
 wait_for_container() {
     echo "Waiting for $1 to be ready..."
     until [ "`docker inspect --format=\"{{.State.Running}}\" $1`"=="true" ]; do
@@ -38,7 +42,7 @@ wait_for_container() {
     echo "$1 is ready."
 }
 
-# Function to generate certificates
+# Generate self-signed certificates
 generate_certificates() {
     local phoenixd_domain=$1
     local lnbits_domain=$2
@@ -79,6 +83,7 @@ generate_certificates() {
     echo "Self-signed certificates generated successfully for testing."
 }
 
+# Generate Letsencrypt certificates
 generate_certificates_certbot() {
     local phoenixd_domain=$1
     local lnbits_domain=$2
@@ -130,12 +135,49 @@ generate_certificates_certbot() {
     sudo cp -R /etc/letsencrypt .
 }
 
+## Functions section end.
+
+# Check if the script is being run as root
+if [ ! "$(id -u)" -eq 0 ]; then
+    echo "This script needs root priviledges. Run it using sudo."
+    exit 1
+fi
+
+echo "Packages update & install some dependencies..."
+sudo apt update
+sudo apt -y install ufw
+echo 
+
+# Check if ufw is installed
+if ! command -v ufw &> /dev/null; then
+    echo "ufw Firewall is not installed on this system. Please install and run again."
+    exit 1
+fi
+
+# Check if ufw is active
+if ! ufw status | grep -q "Status: active"; then
+    echo "ufw Firewall is not active. Please enable ufw first."
+    exit 1
+fi
+
+# Check if port 80 is allowed in ufw
+if ufw status | grep -q "80"; then
+    echo "Port $PORT is allowed through ufw."
+    echo "This is OK for the certbot script"
+else
+    echo "Port $PORT is not allowed through ufw."
+    echo "Port 80 status open is necessary to run certbot. Please open and run again"
+    exit 1
+fi
+
+
 # Copy example files
 cp docker-compose.yml.example docker-compose.yml
 cp default.conf.example default.conf
 cp .env.example .env
 
 echo "Example files copied and renamed."
+echo 
 
 # Request configuration data from the user
 read -p "Enter the domain for Phoenixd API (e.g., api.yourdomain.com): " PHOENIXD_DOMAIN
