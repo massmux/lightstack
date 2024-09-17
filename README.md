@@ -9,8 +9,8 @@
 
 ```
 cd ~
-git clone https://github.com/massmux/phoenixd-docker
-cd phoenixd-docker
+git clone https://github.com/massmux/lightstack.git
+cd lightstack
 ```
 
 ### Choose domain and cnames
@@ -27,7 +27,7 @@ lb1 will be the lnbits install
 
 
 ```
-cd phoenixd-docker
+cd lightstack
 ./init.sh
 
 ```
