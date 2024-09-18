@@ -2,15 +2,14 @@
 
  Just run your own self-custodial cloud Lightning node on your VPS, from your domain name, with this stack. You immediately get a LNBits instance on your own node and the phoenixd endpoint available on a SSL connection
 
-
 ## Installation
 
 ### Get the repo
 
 ```
 cd ~
-git clone https://github.com/massmux/phoenixd-docker
-cd phoenixd-docker
+git clone https://github.com/massmux/lightstack
+cd lightstack
 ```
 
 ### Choose domain and cnames
@@ -27,20 +26,25 @@ lb1 will be the lnbits install
 
 
 ```
-cd phoenixd-docker
+cd lightstack
 ./init.sh
 
 ```
-In case you need to start inizialization from the beginning, you need to clear existing configuration by issuing:
+
+The interactive init script makes possible to choose beween using PostgreSQL or SQLite as database support, and choose self-signed certificates (for testing purposes) or Letsencrypt ones. You will be asked during install.
+
+PostgreSQL is better when thinking to large amount of users installs.
+
+In case you need to start inizialization from the beginning, you need to clear existing configuration (if the case) by issuing:
 
 ```
 ./init.sh clear
 ```
-
+Please note that this will clear all data, configuration files and database in existing directory. If you had funds in that node, you will loose them all, so be careful and check it before
 
 ### Access
 
-Access LNBITS at:
+Access LNBITS instance at:
 
 - https://lb1.yourdomain.com
 
