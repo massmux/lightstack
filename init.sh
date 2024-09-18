@@ -2,8 +2,9 @@
 
 # Interactive initialization script for phoenixd/lnbits stack
 
-# if got clear parameter, then clear existing initialization and exit
 if [[ $1 =~ ^clear$ ]]; then
+	docker compose stop
+	docker compose rm
 	sudo rm -Rf data/ letsencrypt/ lnbitsdata/ pgtmp/ pgdata/ docker-compose.yml default.conf
         echo "Setup cleared"
         exit 0
@@ -11,136 +12,65 @@ if [[ $1 =~ ^clear$ ]]; then
 
 set -e
 
-# Function to generate a random password
-generate_password() {
-    openssl rand -base64 12 | tr -d "=+/" | cut -c1-16
-}
 
-# Function to update or add a variable in the .env file
-update_env() {
-    local key=$1
-    local value=$2
-    local file=".env"
-    if grep -q "^$key=" "$file"; then
-        sed -i "s|^$key=.*|$key=$value|" "$file"
-    else
-        echo "$key=$value" >> "$file"
-    fi
-}
+source $(pwd)/initlib.sh
 
-# Function to wait for a container to be ready
-wait_for_container() {
-    echo "Waiting for $1 to be ready..."
-    until [ "`docker inspect --format=\"{{.State.Running}}\" $1`"=="true" ]; do
-        sleep 1;
-    done;
-    sleep 2;
-    echo "$1 is ready."
-}
 
-# Function to generate certificates
-generate_certificates() {
-    local phoenixd_domain=$1
-    local lnbits_domain=$2
-    local cert_dir="letsencrypt/live"
+# Check if the script is being run as root
+if [ ! "$(id -u)" -eq 0 ]; then
+    echo "This script needs root priviledges. Run it using sudo."
+    exit 1
+fi
 
-    echo "Generating self-signed certificates for testing..."
+echo "Packages update & install some dependencies..."
+sudo apt update
+sudo apt -y install ufw
+echo 
 
-    # Create necessary directories
-    mkdir -p "$cert_dir/$phoenixd_domain"
-    mkdir -p "$cert_dir/$lnbits_domain"
+# Check if ufw is installed
+if ! command -v ufw &> /dev/null; then
+    echo "ufw Firewall is not installed on this system. Please install and run again."
+    exit 1
+fi
 
-    # Generate certificates for Phoenixd domain
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout "$cert_dir/$phoenixd_domain/privkey.pem" \
-        -out "$cert_dir/$phoenixd_domain/fullchain.pem" \
-        -subj "/CN=$phoenixd_domain" 2>/dev/null
+# Check if ufw is active
+if ! ufw status | grep -q "Status: active"; then
+    echo "ufw Firewall is not active. Please enable ufw first."
+    exit 1
+fi
 
-    if [ $? -eq 0 ]; then
-        echo "Certificates for $phoenixd_domain generated successfully."
-    else
-        echo "An error occurred while generating certificates for $phoenixd_domain."
-        exit 1
-    fi
-
-    # Generate certificates for LNbits domain
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout "$cert_dir/$lnbits_domain/privkey.pem" \
-        -out "$cert_dir/$lnbits_domain/fullchain.pem" \
-        -subj "/CN=$lnbits_domain" 2>/dev/null
-
-    if [ $? -eq 0 ]; then
-        echo "Certificates for $lnbits_domain generated successfully."
-    else
-        echo "An error occurred while generating certificates for $lnbits_domain."
-        exit 1
-    fi
-
-    echo "Self-signed certificates generated successfully for testing."
-}
-
-generate_certificates_certbot() {
-    local phoenixd_domain=$1
-    local lnbits_domain=$2
-
-    echo "Generating valid certificates using Certbot..."
-    echo "Port 80 must be open on the host server..."
-
-    # Check if Certbot is installed
-    if ! command -v certbot &> /dev/null; then
-        echo "Certbot is not installed. Please install Certbot and try again."
-        exit 1
-    fi
-
-    # Prompt for email address
-    read -p "Enter an email address for important account notifications: " cert_email
-
-    # Prompt for Terms of Service agreement
-    echo "Please read the Let's Encrypt Terms of Service at https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
-    read -p "Do you agree to the Let's Encrypt Terms of Service? (y/n): " tos_agreement
-    if [[ ! $tos_agreement =~ ^[Yy]$ ]]; then
-        echo "You must agree to the Terms of Service to continue."
-        exit 1
-    fi
-
-    # Generate certificate for Phoenixd domain
-    echo "Generating certificate for $phoenixd_domain"
-    sudo certbot certonly --standalone -d $phoenixd_domain --email $cert_email --agree-tos
-
-    if [ $? -eq 0 ]; then
-        echo "Certificate for $phoenixd_domain generated successfully."
-    else
-        echo "An error occurred while generating certificate for $phoenixd_domain."
-        exit 1
-    fi
-
-    # Generate certificate for LNbits domain
-    echo "Generating certificate for $lnbits_domain"
-    sudo certbot certonly --standalone -d $lnbits_domain --email $cert_email --agree-tos
-
-    if [ $? -eq 0 ]; then
-        echo "Certificate for $lnbits_domain generated successfully."
-    else
-        echo "An error occurred while generating certificate for $lnbits_domain."
-        exit 1
-    fi
-
-    echo "Valid certificates generated successfully using Certbot."
-    echo "Copying letsencrypt dir..."
-    sudo cp -R /etc/letsencrypt .
-}
-
-# Copy example files
-cp docker-compose.yml.example docker-compose.yml
-cp default.conf.example default.conf
-cp .env.example .env
-
-echo "Example files copied and renamed."
+# Check if port 80 is allowed in ufw
+if ufw status | grep -q "80"; then
+    echo "Port $PORT is allowed through ufw."
+    echo "This is OK for the certbot script"
+else
+    echo "Port $PORT is not allowed through ufw."
+    echo "Port 80 status open is necessary to run certbot. Please open and run again"
+    exit 1
+fi
+echo 
 
 # Request configuration data from the user
+echo ">>>Please provide needed configuration infos<<<"
+echo
 read -p "Enter the domain for Phoenixd API (e.g., api.yourdomain.com): " PHOENIXD_DOMAIN
 read -p "Enter the domain for LNbits (e.g., lnbits.yourdomain.com): " LNBITS_DOMAIN
 read -p "Do you want real Letsencrypt certificates to be issued? (y/n): " letscertificates
+read -p "Do you want LNBits to use PostgreSQL? (y/n): " postgresyesno
+echo
+
+# Copy example files
+cp default.conf.example default.conf
+if [[ $postgresyesno =~ ^[Yy]$ ]]; then
+	cp docker-compose.yml.example docker-compose.yml
+	cp .env.example .env
+else
+	cp docker-compose.yml.sqlite.example docker-compose.yml
+	cp .env.sqlite.example .env
+fi
+
+echo "docker-compose.yml and .env files set up."
+echo 
 
 
 # Generate certificates
@@ -170,7 +100,12 @@ sed -i '/^LNBITS_SITE_DESCRIPTION=/d' .env
 # Add or update necessary variables
 update_env "LNBITS_BACKEND_WALLET_CLASS" "PhoenixdWallet"
 update_env "PHOENIXD_API_ENDPOINT" "http://phoenixd:9740/"
-update_env "LNBITS_DATABASE_URL" "postgres://postgres:$POSTGRES_PASSWORD@postgres:5432/lnbits"
+
+# If no postgresql, there is no LNBITS_DATABASE_URL to configure in .env file
+if [[ $postgresyesno =~ ^[Yy]$ ]]; then
+	update_env "LNBITS_DATABASE_URL" "postgres://postgres:$POSTGRES_PASSWORD@postgres:5432/lnbits"
+fi
+
 update_env "LNBITS_SITE_TITLE" "$LNBITS_DOMAIN"
 update_env "LNBITS_SITE_TAGLINE" "free and open-source lightning wallet"
 update_env "LNBITS_SITE_DESCRIPTION" "The world's most powerful suite of bitcoin tools. Run for yourself, for others, or as part of a stack."
@@ -194,9 +129,6 @@ sed -i "s|ssl_certificate_key /etc/letsencrypt/live/lb1\.yourdomain\.com/|ssl_ce
 
 echo "Configuration completed. "
 echo "Certificates have been generated for $PHOENIXD_DOMAIN and $LNBITS_DOMAIN"
-echo "Postgres password has been generated, and configuration files have been updated."
-echo "The generated password for Postgres is: $POSTGRES_PASSWORD"
-echo "Make sure to save this password in a secure location."
 
 # Build Docker images
 echo "Building Phoenixd Docker image ..."
@@ -212,17 +144,19 @@ mkdir data
 
 
 # Start the Postgres container
-echo "Starting the Postgres container..."
-docker compose up -d postgres
+if [[ $postgresyesno =~ ^[Yy]$ ]]; then
+	echo "Starting the Postgres container..."
+	docker compose up -d postgres
 
-# Wait for Postgres to be ready
-echo "Waiting for Postgres to be ready..."
-until docker compose exec postgres pg_isready
-do
-  echo "Postgres is not ready yet. Waiting..."
-  sleep 2
-done
-echo "Postgres is ready."
+	# Wait for Postgres to be ready
+	echo "Waiting for Postgres to be ready..."
+	until docker compose exec postgres pg_isready
+	do
+	  echo "Postgres is not ready yet. Waiting..."
+	  sleep 2
+	done
+	echo "Postgres is ready."
+fi
 
 
 # Start the Phoenixd container
@@ -252,27 +186,21 @@ echo "All containers have been started."
 echo "Waiting 30 seconds to allow for complete initialization..."
 sleep 30
 
-
 # Stop all containers
 echo "Stopping all containers..."
 docker compose down
 
 echo "All containers have been stopped."
 
-
 # Configure phoenix.conf and update .env
 echo "Configuring phoenix.conf and updating .env..."
-
 
 # Use the relative path to the current directory
 PHOENIX_CONF="$(pwd)/data/phoenix.conf"
 
 if [ ! -f "$PHOENIX_CONF" ]; then
     echo "ERROR: phoenix.conf file not found in $PHOENIX_CONF"
-    echo "Contents of the current directory:"
-    ls -la
-    echo "Contents of the data directory:"
-    ls -la data/
+    echo "Setup aborted!"
     exit 1
 fi
 
@@ -291,9 +219,9 @@ if [ -n "$PHOENIXD_PASSWORD" ]; then
     update_env "PHOENIXD_API_PASSWORD" "$PHOENIXD_PASSWORD"
     echo "PHOENIXD_API_PASSWORD updated in .env file"
 else
-    echo "WARNING: Phoenixd password not found in phoenix.conf"
-    echo "Contents of phoenix.conf:"
-    cat "$PHOENIX_CONF"
+    echo "ERROR: Phoenixd password not found in phoenix.conf"
+    echo "Setup aborted!"
+    exit 1
 fi
 
 # Verify the contents of the .env file
@@ -303,9 +231,10 @@ grep -E "^(LNBITS_BACKEND_WALLET_CLASS|PHOENIXD_API_ENDPOINT|PHOENIXD_API_PASSWO
 echo "Configuration of phoenix.conf and .env update completed."
 
 echo "Setup completed."
-echo "Remember to save the Postgres password and Phoenixd password in a secure location:"
 echo "Postgres password: $POSTGRES_PASSWORD"
-echo "Phoenixd password: $PHOENIXD_PASSWORD"
+if [[ $postgresyesno =~ ^[Yy]$ ]]; then
+	echo "Phoenixd password: $PHOENIXD_PASSWORD"
+fi
 
 # Restart all containers
 echo "Restarting all containers with the new configurations..."
