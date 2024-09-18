@@ -8,7 +8,7 @@
 
 ```
 cd ~
-git clone https://github.com/massmux/lightstack
+git clone https://github.com/massmux/lightstack.git
 cd lightstack
 ```
 
